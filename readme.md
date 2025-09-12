@@ -1,8 +1,8 @@
 # ASKIFY
 
 ## TODOS
-[] - Implement user authentication
-[] - Implement backend for pdf chat w/ langchain, openai etc
+[x] - Implement user authentication
+[x] - Implement backend for pdf chat w/ langchain, openai etc
 [] - Implement backend for repo cloning and chat
 [] - Database integration for user data and chat history
 [] - Implement frontend for user interaction
