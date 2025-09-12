@@ -11,4 +11,9 @@ export class ChatController {
   async docChat(@Req() req: Request, @Res() res: Response) {
     return this.chatService.docChat(req, res);
   }
+
+  @Post('repo')
+  async repoChat(@Req() req: Request, @Res() res: Response) {
+    return this.chatService.repoChat(req, res);
+  }
 }

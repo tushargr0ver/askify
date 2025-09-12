@@ -3,7 +3,7 @@
 ## TODOS
 [x] - Implement user authentication
 [x] - Implement backend for pdf chat w/ langchain, openai etc
-[] - Implement backend for repo cloning and chat
+[x] - Implement backend for repo cloning and chat
 [] - Database integration for user data and chat history
 [] - Implement frontend for user interaction
 [] - Add tokens limitation per user

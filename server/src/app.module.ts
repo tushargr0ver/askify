@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { FileUploadModule } from './file-upload/file-upload.module';
 import { BullModule } from '@nestjs/bull';
 import { ChatModule } from './chat/chat.module';
+import { RepositoryModule } from './repository/repository.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { ChatModule } from './chat/chat.module';
     UsersModule,
     PrismaModule,
     FileUploadModule,
-    ChatModule, // This module provides the FileUploadController
+    ChatModule,
+    RepositoryModule, // This module provides the FileUploadController
   ],
   // The controllers array in AppModule should only contain controllers
   // that belong directly to AppModule, not those from other modules.
