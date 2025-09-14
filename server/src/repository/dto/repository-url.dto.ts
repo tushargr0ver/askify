@@ -1,11 +1,11 @@
-// src/repository/dto/repository-url.dto.ts
-import { IsNotEmpty, IsUrl, Matches } from 'class-validator';
+import { IsNotEmpty, IsString, IsUrl } from 'class-validator';
 
-export class RepositoryUrlDto {
+export class ProcessRepositoryDto {
   @IsNotEmpty()
   @IsUrl()
-  @Matches(/^(https?:\/\/)?(www\.)?github\.com\/[\w-]+\/[\w-]+$/, {
-    message: 'URL must be a valid GitHub repository URL',
-  })
   url: string;
+
+  @IsNotEmpty()
+  @IsString()
+  chatId: string;
 }

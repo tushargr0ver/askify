@@ -14,38 +14,26 @@ export class FileProcessorWorker {
 
   @Process('process-file')
   async processFile(job: Job<any>) {
-        const {path} = job.data
-        this.logger.log(`Processing file at path: ${path}`);
+    const { path, chatId } = job.data; // Add chatId to job data
+    this.logger.log(`Processing file at path: ${path} for chat: ${chatId}`);
 
-        const loader = new PDFLoader(path)
-        const docs = await loader.load()
+    const loader = new PDFLoader(path);
+    const docs = await loader.load();
 
-        // const textSplitter = new CharacterTextSplitter({
-        //     chunkSize: 300,
-        //     chunkOverlap: 0
-        // });
+    const embeddings = new OpenAIEmbeddings({
+      model: 'text-embedding-3-small',
+      openAIApiKey: process.env.OPENAI_API_KEY
+    });
 
-        // const texts = await textSplitter.splitDocuments(docs);
+    const vectorStore = await QdrantVectorStore.fromExistingCollection(
+      embeddings,
+      {
+        url: 'http://localhost:6333',
+        collectionName: `chat_${chatId}`, // Chat-specific collection
+      }
+    );
 
-         this.logger.log(docs);
-
-        const embeddings = new OpenAIEmbeddings({
-          model: 'text-embedding-3-small',
-          openAIApiKey: process.env.OPENAI_API_KEY
-        });
-
-        const vectorStore = await QdrantVectorStore.fromExistingCollection(
-          embeddings,
-          {
-            url: 'http://localhost:6333',
-            collectionName: 'documents',
-          }
-        )
-
-        await vectorStore.addDocuments(docs);
-
-        this.logger.log(`All docs are added to the vector store.`);
-       
- 
-}
+    await vectorStore.addDocuments(docs);
+    this.logger.log(`All docs are added to the vector store for chat ${chatId}.`);
+  }
 }

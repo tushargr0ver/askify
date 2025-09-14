@@ -9,6 +9,7 @@ import {
   Get,
   Param,
   Res,
+  Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -55,13 +56,13 @@ export class FileUploadController {
       },
     }),
   )
-  uploadFile(@UploadedFile() file: Express.Multer.File) {
+  uploadFile(@UploadedFile() file: Express.Multer.File, @Body('chatId') chatId: string) {
     if (!file) {
       throw new BadRequestException('File is required');
     }
 
     // Delegate the logic to the service
-    return this.fileUploadService.handleFileUpload(file);
+    return this.fileUploadService.handleFileUpload(file, chatId);
   }
   
   // This endpoint can remain as it is

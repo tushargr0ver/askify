@@ -1,29 +1,45 @@
-// src/repository/repository.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
-import { RepositoryUrlDto } from './dto/repository-url.dto';
 
 @Injectable()
 export class RepositoryService {
   private readonly logger = new Logger(RepositoryService.name);
 
   constructor(
-    @InjectQueue('repository-processing') private repoProcessingQueue: Queue,
+    @InjectQueue('repository-processing')
+    private repositoryProcessingQueue: Queue,
   ) {}
 
-  async processRepositoryUrl(repoDto: RepositoryUrlDto) {
-    this.logger.log(`Queueing repository for processing: ${repoDto.url}`);
-
-    const job = await this.repoProcessingQueue.add('process-repository', {
-      url: repoDto.url,
-      timestamp: new Date().toISOString(),
+  async processRepository(url: string, chatId: string) {
+    this.logger.log(`Queuing repository processing for: ${url}, chat: ${chatId}`);
+    
+    // Add repository processing job
+    const job = await this.repositoryProcessingQueue.add('process-repository', {
+      url,
+      chatId,
     });
 
     return {
-      message: 'Repository queued for processing!',
-      url: repoDto.url,
+      message: 'Repository processing started',
       jobId: job.id,
+      url,
+      chatId,
+    };
+  }
+
+  async getJobStatus(jobId: string) {
+    const job = await this.repositoryProcessingQueue.getJob(jobId);
+    
+    if (!job) {
+      return { status: 'not_found' };
+    }
+
+    return {
+      id: job.id,
+      status: await job.getState(),
+      progress: job.progress(),
+      data: job.data,
     };
   }
 }

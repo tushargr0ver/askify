@@ -27,8 +27,8 @@ export class RepositoryProcessorWorker {
   @Process('process-repository')
   async processRepository(job: Job<any>) {
     try {
-      const { url } = job.data;
-      this.logger.log(`Processing repository: ${url}`);
+      const { url, chatId } = job.data; // Add chatId to job data
+      this.logger.log(`Processing repository: ${url} for chat: ${chatId}`);
 
       // Extract repo name from URL
       const repoName = url.split('/').pop();
@@ -48,9 +48,9 @@ export class RepositoryProcessorWorker {
       await job.progress(50);
       const docs = await this.processFiles(codeFiles, repoDir);
       
-      // Store in vector database
+      // Store in chat-specific vector database
       await job.progress(70);
-      await this.storeVectors(docs);
+      await this.storeVectors(docs, chatId); // Pass chatId
       
       // Cleanup
       await job.progress(90);
@@ -102,21 +102,39 @@ export class RepositoryProcessorWorker {
     return docs;
   }
 
-  private async storeVectors(docs: Document[]) {
+  private async storeVectors(docs: Document[], chatId: string) {
     const embeddings = new OpenAIEmbeddings({
       model: 'text-embedding-3-small',
       openAIApiKey: process.env.OPENAI_API_KEY,
     });
 
-    const vectorStore = await QdrantVectorStore.fromExistingCollection(
-      embeddings,
-      {
-        url: 'http://localhost:6333',
-        collectionName: 'documents',
-      }
-    );
-
-    await vectorStore.addDocuments(docs);
-    this.logger.log(`Added ${docs.length} documents to vector store`);
+    const collectionName = `chat_${chatId}`;
+    
+    try {
+      // Try to connect to existing collection first
+      const vectorStore = await QdrantVectorStore.fromExistingCollection(
+        embeddings,
+        {
+          url: 'http://localhost:6333',
+          collectionName,
+        }
+      );
+      await vectorStore.addDocuments(docs);
+      this.logger.log(`Added ${docs.length} documents to existing collection ${collectionName}`);
+    } catch (error) {
+      // If collection doesn't exist, create it with the documents
+      this.logger.log(`Creating new collection: ${collectionName}`);
+      await QdrantVectorStore.fromDocuments(
+        docs,
+        embeddings,
+        {
+          url: 'http://localhost:6333',
+          collectionName,
+        }
+      );
+      this.logger.log(`Created collection ${collectionName} with ${docs.length} documents`);
+    }
+    
+    this.logger.log(`Added ${docs.length} documents to vector store for chat ${chatId}`);
   }
 }
