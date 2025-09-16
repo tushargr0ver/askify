@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { postJson } from "@/lib/api"
 
 const schema = z
   .object({
@@ -40,13 +41,19 @@ export default function SignupPage() {
   })
 
   const [submitting, setSubmitting] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
-  async function onSubmit(_values: FormValues) {
-    // For now, just simulate success and redirect to home
+  async function onSubmit(values: FormValues) {
     setSubmitting(true)
+    setError(null)
     try {
-      await new Promise((r) => setTimeout(r, 600))
+      await postJson<{ email: string; password: string }, any>("/auth/register", {
+        email: values.email,
+        password: values.password,
+      })
       router.push("/")
+    } catch (e: any) {
+      setError(e?.message || "Something went wrong")
     } finally {
       setSubmitting(false)
     }
@@ -103,6 +110,10 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+
+              {error && (
+                <p className="text-sm font-medium text-red-600 dark:text-red-500">{error}</p>
+              )}
 
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Creating account..." : "Create account"}

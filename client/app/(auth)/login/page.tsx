@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { postJson, getJson } from "@/lib/api"
+import { useAuthStore } from "@/hooks/useAuthStore"
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -29,13 +31,25 @@ export default function LoginPage() {
   })
 
   const [submitting, setSubmitting] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+  const setAccessToken = useAuthStore((s) => s.setAccessToken)
 
-  async function onSubmit(_values: FormValues) {
-    // For now, just simulate success and redirect to home
+  async function onSubmit(values: FormValues) {
     setSubmitting(true)
+    setError(null)
     try {
-      await new Promise((r) => setTimeout(r, 600))
+      const res = await postJson<{ email: string; password: string }, { access_token: string }>(
+        "/auth/login",
+        { email: values.email, password: values.password },
+        { credentials: "include" }
+      )
+      setAccessToken(res.access_token)
+      // Fetch profile using the token
+      const profile = await getJson<{ userId: string | number; email: string }>("/auth/profile")
+      useAuthStore.getState().setProfile(profile)
       router.push("/")
+    } catch (e: any) {
+      setError(e?.message || "Invalid email or password")
     } finally {
       setSubmitting(false)
     }
@@ -78,6 +92,10 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
+
+              {error && (
+                <p className="text-sm font-medium text-red-600 dark:text-red-500">{error}</p>
+              )}
 
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? "Signing in..." : "Sign in"}
