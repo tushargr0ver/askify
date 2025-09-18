@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { ThemeSwitch } from "@/components/ui/theme-toggle"
 import { postJson, getJson } from "@/lib/api"
 import { useAuthStore } from "@/hooks/useAuthStore"
 
@@ -56,7 +57,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-0px)] grid place-items-center p-4">
+    <div className="min-h-[calc(100vh-0px)] grid place-items-center p-4 relative">
+      {/* Theme toggle in top-right corner */}
+      <div className="absolute top-4 right-4">
+        <ThemeSwitch />
+      </div>
+      
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Welcome back</CardTitle>
