@@ -67,6 +67,46 @@ export async function putJson<TBody extends object, TResp = unknown>(path: strin
   return request<TResp>(path, { method: "PUT", body: JSON.stringify(body), ...init })
 }
 
+export async function patchJson<TBody extends object, TResp = unknown>(path: string, body: TBody, init?: RequestInit): Promise<TResp> {
+  return request<TResp>(path, { method: "PATCH", body: JSON.stringify(body), ...init })
+}
+
 export async function deleteJson<TResp = unknown>(path: string, init?: RequestInit): Promise<TResp> {
   return request<TResp>(path, { method: "DELETE", ...init })
+}
+
+export async function uploadFile<TResp = unknown>(path: string, formData: FormData, init?: RequestInit): Promise<TResp> {
+  const { useAuthStore } = await import("@/hooks/useAuthStore")
+  const token = useAuthStore.getState().accessToken
+
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string> | undefined),
+  }
+  // Don't set Content-Type for FormData, let browser set it with boundary
+  if (token) headers["Authorization"] = `Bearer ${token}`
+
+  const res = await fetch(buildUrl(path), { 
+    method: "POST",
+    body: formData,
+    headers,
+    ...init
+  })
+
+  let data: any = null
+  const text = await res.text()
+  try { data = text ? JSON.parse(text) : null } catch { data = text }
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      useAuthStore.getState().logout()
+      if (typeof window !== "undefined") {
+        window.location.replace("/login")
+      }
+    }
+    const message = pickErrorMessage(data) || `Request failed with ${res.status}`
+    const err: ApiError = { status: res.status, message, data }
+    throw err
+  }
+
+  return data as TResp
 }

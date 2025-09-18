@@ -6,6 +6,7 @@ import {OpenAI} from 'openai';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+import { getModelById, getDefaultModel, getRecommendedModel, AVAILABLE_MODELS } from './models.config';
 
 
 @Injectable()
@@ -68,13 +69,24 @@ export class ChatService {
   }
 
  async sendMessage(chatId: string, userId: number, sendMessageDto: SendMessageDto) {
-    // Verify chat belongs to user
+    // Verify chat belongs to user and get user preferences
     const chat = await this.prisma.chat.findFirst({
       where: { id: chatId, userId },
+      include: { user: true }
     });
 
     if (!chat) {
       throw new NotFoundException('Chat not found');
+    }
+
+    // Determine which model to use
+    let selectedModel = sendMessageDto.model || chat.user.preferredModel || getDefaultModel().id;
+    
+    // Validate model exists
+    const modelConfig = getModelById(selectedModel);
+    if (!modelConfig) {
+      this.logger.warn(`Invalid model ${selectedModel}, falling back to default`);
+      selectedModel = getDefaultModel().id;
     }
 
     // Save user message
@@ -86,19 +98,20 @@ export class ChatService {
       },
     });
 
-    // Process the message based on chat type - pass chatId
+    // Process the message based on chat type - pass chatId and model
     let response: string;
     if (chat.type === 'DOCUMENT') {
-      response = await this.processDocumentChat(sendMessageDto.content, chatId);
+      response = await this.processDocumentChat(sendMessageDto.content, chatId, selectedModel);
     } else {
-      response = await this.processRepositoryChat(sendMessageDto.content, chatId);
+      response = await this.processRepositoryChat(sendMessageDto.content, chatId, selectedModel);
     }
 
-    // Save assistant message
+    // Save assistant message with model info
     const assistantMessage = await this.prisma.message.create({
       data: {
         content: response,
         role: 'ASSISTANT',
+        model: selectedModel,
         chatId,
       },
     });
@@ -178,7 +191,7 @@ export class ChatService {
     }
   }
 
-  private async processDocumentChat(query: string, chatId: string): Promise<string> {
+  private async processDocumentChat(query: string, chatId: string, model: string): Promise<string> {
     const client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
@@ -196,18 +209,40 @@ export class ChatService {
     Context:
     ${JSON.stringify(result)}`;
 
-    const chatResult = await client.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: query },
-      ],
-    });
+    // Get model config to determine provider
+    const modelConfig = getModelById(model);
+    if (!modelConfig) {
+      throw new Error(`Invalid model: ${model}`);
+    }
+
+    let chatResult;
+    if (modelConfig.provider === 'gemini') {
+      // For Gemini models, we can use OpenAI SDK with Gemini endpoint
+      // This requires setting up a proxy or using a service that bridges Gemini to OpenAI format
+      // For now, we'll fall back to a compatible OpenAI model
+      this.logger.warn(`Gemini model ${model} not yet implemented, falling back to gpt-4o-mini`);
+      chatResult = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: query },
+        ],
+      });
+    } else {
+      // OpenAI models
+      chatResult = await client.chat.completions.create({
+        model: model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: query },
+        ],
+      });
+    }
 
     return chatResult.choices[0].message.content ? chatResult.choices[0].message.content : 'Sorry, I could not generate a response.';
   }
 
-  private async processRepositoryChat(query: string, chatId: string): Promise<string> {
+  private async processRepositoryChat(query: string, chatId: string, model: string): Promise<string> {
     const client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
@@ -225,13 +260,35 @@ export class ChatService {
     Context:
     ${JSON.stringify(result)}`;
 
-    const chatResult = await client.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: query },
-      ],
-    });
+    // Get model config to determine provider
+    const modelConfig = getModelById(model);
+    if (!modelConfig) {
+      throw new Error(`Invalid model: ${model}`);
+    }
+
+    let chatResult;
+    if (modelConfig.provider === 'gemini') {
+      // For Gemini models, we can use OpenAI SDK with Gemini endpoint
+      // This requires setting up a proxy or using a service that bridges Gemini to OpenAI format
+      // For now, we'll fall back to a compatible OpenAI model
+      this.logger.warn(`Gemini model ${model} not yet implemented, falling back to gpt-4o-mini`);
+      chatResult = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: query },
+        ],
+      });
+    } else {
+      // OpenAI models
+      chatResult = await client.chat.completions.create({
+        model: model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: query },
+        ],
+      });
+    }
 
     return chatResult.choices[0].message.content ? chatResult.choices[0].message.content : 'Sorry, I could not generate a response.';
   }

@@ -64,6 +64,11 @@ export class FileUploadController {
     // Delegate the logic to the service
     return this.fileUploadService.handleFileUpload(file, chatId);
   }
+
+  @Get('job/:jobId')
+  async getJobStatus(@Param('jobId') jobId: string) {
+    return this.fileUploadService.getJobStatus(jobId);
+  }
   
   // This endpoint can remain as it is
   @Get(':filename')

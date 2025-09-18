@@ -5,38 +5,31 @@ import { Send, Loader2, FileText, GitBranch } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useChatStore } from "@/hooks/useChatStore"
+import { QuickModelSelector } from "./quick-model-selector"
 import { cn } from "@/lib/utils"
 
 export function ChatInput() {
   const [message, setMessage] = React.useState("")
   const [sending, setSending] = React.useState(false)
-  const { activeChat, addMessage, processing } = useChatStore()
+  const [selectedModel, setSelectedModel] = React.useState<string | undefined>()
+  const { activeChat, sendMessage: sendChatMessage, processing, loading } = useChatStore()
 
   const handleSend = async () => {
     if (!message.trim() || !activeChat || sending || processing) return
 
-    const userMessage = {
-      id: Date.now().toString(),
-      content: message.trim(),
-      role: "USER" as const,
-      createdAt: new Date().toISOString()
-    }
-
-    addMessage(userMessage)
+    const messageContent = message.trim()
     setMessage("")
     setSending(true)
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
-        content: `I understand you're asking about "${message.trim()}". Based on the ${activeChat.type === "DOCUMENT" ? "document" : "repository"} you've provided, I can help you with that. This is a simulated response - in the real application, this would be generated using the actual AI service with the processed content.`,
-        role: "ASSISTANT" as const,
-        createdAt: new Date().toISOString()
-      }
-      addMessage(aiMessage)
+    try {
+      await sendChatMessage(messageContent, selectedModel)
+    } catch (error) {
+      console.error("Failed to send message:", error)
+      // Optionally restore the message on error
+      setMessage(messageContent)
+    } finally {
       setSending(false)
-    }, 2000)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -46,7 +39,7 @@ export function ChatInput() {
     }
   }
 
-  const isDisabled = !activeChat || sending || processing
+  const isDisabled = !activeChat || sending || processing || loading
 
   return (
     <div className="border-t bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -87,7 +80,7 @@ export function ChatInput() {
             size="sm"
             className="absolute right-2 bottom-2 h-8 w-8 p-0"
           >
-            {sending ? (
+            {sending || loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />
@@ -96,7 +89,16 @@ export function ChatInput() {
         </div>
         
         <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-          <span className="hidden sm:block">Press Enter to send, Shift+Enter for new line</span>
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:block">Press Enter to send, Shift+Enter for new line</span>
+            {activeChat && (
+              <QuickModelSelector
+                value={selectedModel}
+                onChange={setSelectedModel}
+                compact
+              />
+            )}
+          </div>
           {activeChat && (
             <div className="flex items-center gap-1">
               {activeChat.type === "DOCUMENT" ? (

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 import { useChatStore } from "@/hooks/useChatStore"
 import { cn } from "@/lib/utils"
 
@@ -54,14 +55,14 @@ export function ChatMessages() {
                   : "bg-muted"
               )}
             >
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                {message.content.split('\n').map((line, index) => (
-                  <React.Fragment key={index}>
-                    {line}
-                    {index < message.content.split('\n').length - 1 && <br />}
-                  </React.Fragment>
-                ))}
-              </div>
+              <MarkdownRenderer 
+                content={message.content}
+                className={cn(
+                  message.role === "USER" 
+                    ? "prose-invert" 
+                    : ""
+                )}
+              />
               <div className={cn(
                 "text-xs mt-2 opacity-70",
                 message.role === "USER" ? "text-primary-foreground" : "text-muted-foreground"

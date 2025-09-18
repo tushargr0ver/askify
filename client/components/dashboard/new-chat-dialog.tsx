@@ -18,49 +18,89 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
   const [selectedType, setSelectedType] = React.useState<"DOCUMENT" | "REPOSITORY" | null>(null)
   const [file, setFile] = React.useState<File | null>(null)
   const [repoUrl, setRepoUrl] = React.useState("")
+  const [repoUrlError, setRepoUrlError] = React.useState("")
   const [processing, setProcessing] = React.useState(false)
-  const { createChat } = useChatStore()
+  const { createChat, createChatWithFile, createChatWithRepository, uploadProgress } = useChatStore()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+      if (!allowedTypes.includes(selectedFile.type)) {
+        alert('Please select a PDF, DOC, or DOCX file.')
+        return
+      }
+      
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+      if (selectedFile.size > maxSize) {
+        alert('File size must be less than 5MB.')
+        return
+      }
+      
       setFile(selectedFile)
+    }
+  }
+
+  const validateRepoUrl = (url: string) => {
+    const githubUrlPattern = /^https:\/\/github\.com\/[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+\/?$/
+    if (!url) {
+      setRepoUrlError("")
+      return false
+    }
+    if (!githubUrlPattern.test(url)) {
+      setRepoUrlError("Please enter a valid GitHub repository URL (e.g., https://github.com/user/repo)")
+      return false
+    }
+    setRepoUrlError("")
+    return true
+  }
+
+  const handleRepoUrlChange = (value: string) => {
+    setRepoUrl(value)
+    if (value) {
+      validateRepoUrl(value)
+    } else {
+      setRepoUrlError("")
     }
   }
 
   const handleCreate = async () => {
     if (!selectedType) return
 
-    setProcessing(true)
-    
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    try {
+      if (selectedType === "DOCUMENT" && file) {
+        await createChatWithFile(file)
+      } else if (selectedType === "REPOSITORY" && repoUrl) {
+        await createChatWithRepository(repoUrl)
+      }
 
-    if (selectedType === "DOCUMENT" && file) {
-      createChat(file.name, "DOCUMENT")
-    } else if (selectedType === "REPOSITORY" && repoUrl) {
-      const repoName = repoUrl.split("/").pop() || "repository"
-      createChat(repoName, "REPOSITORY")
-    }
-
-    // Reset form
-    setSelectedType(null)
-    setFile(null)
-    setRepoUrl("")
-    setProcessing(false)
-    onOpenChange(false)
-  }
-
-  const handleClose = () => {
-    if (!processing) {
+      // Reset form
       setSelectedType(null)
       setFile(null)
       setRepoUrl("")
+      setRepoUrlError("")
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Failed to create chat:", error)
+      // You could add error toast here
+    }
+  }
+
+  const handleClose = () => {
+    const isProcessing = useChatStore.getState().processing
+    if (!isProcessing) {
+      setSelectedType(null)
+      setFile(null)
+      setRepoUrl("")
+      setRepoUrlError("")
       onOpenChange(false)
     }
   }
 
-  const canCreate = (selectedType === "DOCUMENT" && file) || (selectedType === "REPOSITORY" && repoUrl)
+  const canCreate = (selectedType === "DOCUMENT" && file) || (selectedType === "REPOSITORY" && repoUrl && !repoUrlError)
+  const isProcessing = useChatStore.getState().processing
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -153,6 +193,20 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
                 </label>
               </div>
             </div>
+            {file && uploadProgress > 0 && uploadProgress < 100 && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Uploading...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -172,24 +226,41 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
                   id="repo-url"
                   placeholder="https://github.com/username/repository"
                   value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                  className="pl-10"
+                  onChange={(e) => handleRepoUrlChange(e.target.value)}
+                  className={cn("pl-10", repoUrlError && "border-red-500")}
                 />
               </div>
+              {repoUrlError && (
+                <p className="text-sm text-red-500 mt-1">{repoUrlError}</p>
+              )}
+              {repoUrl && !repoUrlError && uploadProgress > 0 && uploadProgress < 100 && (
+                <div className="space-y-2 mt-3">
+                  <div className="flex justify-between text-sm">
+                    <span>Processing repository...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {selectedType && (
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={handleClose} disabled={processing}>
+            <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={!canCreate || processing}>
-              {processing ? (
+            <Button onClick={handleCreate} disabled={!canCreate || isProcessing}>
+              {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  {selectedType === "DOCUMENT" ? "Uploading..." : "Processing..."}
                 </>
               ) : (
                 "Create Chat"

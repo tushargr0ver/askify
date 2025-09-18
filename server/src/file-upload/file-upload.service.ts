@@ -37,4 +37,19 @@ export class FileUploadService {
 
     return response;
   }
+
+  async getJobStatus(jobId: string) {
+    const job = await this.fileProcessingQueue.getJob(jobId);
+    
+    if (!job) {
+      return { status: 'not_found' };
+    }
+
+    return {
+      id: job.id,
+      status: await job.getState(),
+      progress: job.progress(),
+      data: job.data,
+    };
+  }
 }

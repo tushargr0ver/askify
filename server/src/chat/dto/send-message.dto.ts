@@ -1,8 +1,12 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsNotEmpty, IsString, IsOptional } from "class-validator";
 
 
 export class SendMessageDto {
     @IsNotEmpty()
     @IsString()
     content: string;
+
+    @IsOptional()
+    @IsString()
+    model?: string; // Optional model override
 }
