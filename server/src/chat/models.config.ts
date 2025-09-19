@@ -256,7 +256,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
 
   // Gemini Models (via OpenAI SDK)
   {
-    id: 'gemini-2.5-pro',
+    id: 'gemini-2.0-flash-exp',
     name: 'Gemini 2.5 Pro',
     provider: 'gemini',
     description: 'Strong reasoning, multimodal (text, image, audio, video, PDF), long context, high accuracy',
@@ -275,7 +275,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     maxOutputTokens: 32768
   },
   {
-    id: 'gemini-2.5-flash',
+    id: 'gemini-1.5-flash',
     name: 'Gemini 2.5 Flash',
     provider: 'gemini',
     description: 'Faster, cheaper, still multimodal, good balance for RAG',
@@ -295,7 +295,7 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     recommended: true
   },
   {
-    id: 'gemini-2.5-flash-lite',
+    id: 'gemini-1.5-flash-8b',
     name: 'Gemini 2.5 Flash Lite',
     provider: 'gemini',
     description: 'Lightweight, optimized for cost and throughput',
@@ -314,23 +314,23 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     maxOutputTokens: 16384
   },
   {
-    id: 'gemma-3',
-    name: 'Gemma 3',
+    id: 'gemini-1.5-pro',
+    name: 'Gemini 1.5 Pro',
     provider: 'gemini',
-    description: 'Open lightweight models, text + multimodal, good for on-device or custom deployments',
-    tier: 'standard',
+    description: 'Previous generation flagship model, still very capable',
+    tier: 'advanced',
     capabilities: {
-      reasoning: 3,
-      coding: 3,
+      reasoning: 4,
+      coding: 4,
       multimodal: true,
-      longContext: false
+      longContext: true
     },
     pricing: {
-      inputTokens: 0.02,
-      outputTokens: 0.08
+      inputTokens: 1.25,
+      outputTokens: 5.00
     },
-    contextWindow: 128000,
-    maxOutputTokens: 8192
+    contextWindow: 2000000,
+    maxOutputTokens: 32768
   }
 ]
 
@@ -349,14 +349,14 @@ export function getDefaultModel(): ModelConfig {
 export function getRecommendedModel(chatType: 'DOCUMENT' | 'REPOSITORY'): ModelConfig {
   // Recommend models based on chat type
   if (chatType === 'REPOSITORY') {
-    // For code, prioritize coding capabilities - recommend GPT-4o or Gemini 2.5 Flash
+    // For code, prioritize coding capabilities - recommend GPT-4o or Gemini 1.5 Flash
     return AVAILABLE_MODELS.find(model => model.id === 'gpt-4o') || 
-           AVAILABLE_MODELS.find(model => model.id === 'gemini-2.5-flash') ||
+           AVAILABLE_MODELS.find(model => model.id === 'gemini-1.5-flash') ||
            getDefaultModel()
   } else {
-    // For documents, balance performance and cost - recommend GPT-4o Mini or Gemini 2.5 Flash
+    // For documents, balance performance and cost - recommend GPT-4o Mini or Gemini 1.5 Flash
     return AVAILABLE_MODELS.find(model => model.id === 'gpt-4o-mini') || 
-           AVAILABLE_MODELS.find(model => model.id === 'gemini-2.5-flash') ||
+           AVAILABLE_MODELS.find(model => model.id === 'gemini-1.5-flash') ||
            getDefaultModel()
   }
 }
