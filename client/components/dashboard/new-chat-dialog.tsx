@@ -25,15 +25,13 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
-      // Validate file type
       const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
       if (!allowedTypes.includes(selectedFile.type)) {
         alert('Please select a PDF, DOC, or DOCX file.')
         return
       }
       
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+      const maxSize = 5 * 1024 * 1024
       if (selectedFile.size > maxSize) {
         alert('File size must be less than 5MB.')
         return
@@ -76,7 +74,6 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
         await createChatWithRepository(repoUrl)
       }
 
-      // Reset form
       setSelectedType(null)
       setFile(null)
       setRepoUrl("")
@@ -84,7 +81,6 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
       onOpenChange(false)
     } catch (error) {
       console.error("Failed to create chat:", error)
-      // You could add error toast here
     }
   }
 

@@ -41,7 +41,6 @@ export function QuickModelSelector({ value, onChange, compact = false }: ModelSe
       setModels(response.availableModels);
       setDefaultModel(response.defaultModel);
       
-      // If no value is selected and we have a user preference or default, use that
       if (!value) {
         const initialModel = response.preferredModel || response.defaultModel.id;
         onChange(initialModel);

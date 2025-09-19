@@ -12,6 +12,7 @@ type ThemeState = {
   setTheme: (theme: Theme) => void
   setResolvedTheme: (theme: "light" | "dark") => void
   setHydrated: (hydrated: boolean) => void
+  initializeTheme: () => void
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -28,11 +29,24 @@ export const useThemeStore = create<ThemeState>()(
       },
       setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
       setHydrated: (hydrated) => set({ hydrated }),
+      initializeTheme: () => {
+        if (typeof window !== "undefined") {
+          const { theme } = get()
+          applyTheme(theme)
+          set({ hydrated: true })
+        }
+      },
     }),
     {
       name: "askify-theme",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ theme: state.theme }),
+      onRehydrateStorage: () => (state) => {
+        if (state && typeof window !== "undefined") {
+          applyTheme(state.theme)
+          state.setHydrated(true)
+        }
+      },
     }
   )
 )
@@ -43,7 +57,6 @@ function applyTheme(theme: Theme) {
   const root = document.documentElement
   const { setResolvedTheme } = useThemeStore.getState()
 
-  // Remove existing theme classes
   root.classList.remove("light", "dark")
 
   if (theme === "system") {
@@ -56,9 +69,7 @@ function applyTheme(theme: Theme) {
   }
 }
 
-// Initialize theme on client side
 if (typeof window !== "undefined") {
-  // Listen for system theme changes
   const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
   mediaQuery.addEventListener("change", () => {
     const { theme } = useThemeStore.getState()

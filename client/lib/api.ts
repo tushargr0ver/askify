@@ -82,7 +82,6 @@ export async function uploadFile<TResp = unknown>(path: string, formData: FormDa
   const headers: Record<string, string> = {
     ...(init?.headers as Record<string, string> | undefined),
   }
-  // Don't set Content-Type for FormData, let browser set it with boundary
   if (token) headers["Authorization"] = `Bearer ${token}`
 
   const res = await fetch(buildUrl(path), { 

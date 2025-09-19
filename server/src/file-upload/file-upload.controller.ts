@@ -1,26 +1,27 @@
-// src/file-upload/file-upload.controller.ts
 
 import {
   Controller,
   Post,
   UploadedFile,
   UseInterceptors,
+  UseGuards,
   BadRequestException,
   Get,
   Param,
   Res,
   Body,
+  Request,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { of } from 'rxjs';
 import type { Response } from 'express';
-import { FileUploadService } from './file-upload.service'; // Import the service
+import { FileUploadService } from './file-upload.service';
+import { UsersService } from '../users/users.service';
 
-// We can keep these helpers here or move them to a separate utils file
 export const editFileName = (req, file, callback) => {
-  // ... (same as before)
   const name = file.originalname.split('.')[0];
   const fileExtName = extname(file.originalname);
   const randomName = Array(4)
@@ -31,7 +32,6 @@ export const editFileName = (req, file, callback) => {
 };
 
 export const docFileFilter = (req, file, callback) => {
-  // ... (same as before)
   if (!file.originalname.match(/\.(pdf|doc|docx)$/)) {
     return callback(new BadRequestException('Only document files are allowed!'), false);
   }
@@ -39,9 +39,12 @@ export const docFileFilter = (req, file, callback) => {
 };
 
 @Controller('file-upload')
+@UseGuards(AuthGuard('jwt'))
 export class FileUploadController {
-  // Inject the service through the constructor
-  constructor(private readonly fileUploadService: FileUploadService) {}
+  constructor(
+    private readonly fileUploadService: FileUploadService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @Post()
   @UseInterceptors(
@@ -52,17 +55,34 @@ export class FileUploadController {
       }),
       fileFilter: docFileFilter,
       limits: {
-        fileSize: 1024 * 1024 * 5, // 5 MB
+        fileSize: 1024 * 1024 * 5,
       },
     }),
   )
-  uploadFile(@UploadedFile() file: Express.Multer.File, @Body('chatId') chatId: string) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File, @Body('chatId') chatId: string, @Request() req) {
     if (!file) {
       throw new BadRequestException('File is required');
     }
 
-    // Delegate the logic to the service
-    return this.fileUploadService.handleFileUpload(file, chatId);
+    const usageCheck = await this.usersService.canSendMessage(req.user.userId);
+    if (!usageCheck.canSend) {
+      throw new BadRequestException({
+        message: usageCheck.reason,
+        usage: usageCheck.usage,
+        code: 'USAGE_LIMIT_EXCEEDED'
+      });
+    }
+
+    await this.usersService.incrementUploadUsage(req.user.userId);
+
+    const result = await this.fileUploadService.handleFileUpload(file, chatId);
+
+    const updatedUsage = await this.usersService.getUserUsage(req.user.userId);
+
+    return {
+      ...result,
+      usage: updatedUsage,
+    };
   }
 
   @Get('job/:jobId')
@@ -70,7 +90,6 @@ export class FileUploadController {
     return this.fileUploadService.getJobStatus(jobId);
   }
   
-  // This endpoint can remain as it is
   @Get(':filename')
   seeUploadedFile(@Param('filename') filename: string, @Res() res: Response) {
     return of(res.sendFile(join(process.cwd(), 'uploads/' + filename)));

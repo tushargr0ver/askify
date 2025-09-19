@@ -5,13 +5,13 @@ export interface ModelConfig {
   description: string
   tier: 'standard' | 'advanced' | 'premium'
   capabilities: {
-    reasoning: number // 1-5 scale
+    reasoning: number
     coding: number
     multimodal: boolean
     longContext: boolean
   }
   pricing: {
-    inputTokens: number // per 1M tokens
+    inputTokens: number
     outputTokens: number
   }
   contextWindow: number
@@ -20,7 +20,6 @@ export interface ModelConfig {
 }
 
 export const AVAILABLE_MODELS: ModelConfig[] = [
-  // OpenAI Latest Models
   {
     id: 'gpt-5',
     name: 'GPT-5',
@@ -174,7 +173,6 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     maxOutputTokens: 8192
   },
   
-  // Current OpenAI Models
   {
     id: 'gpt-4o',
     name: 'GPT-4o',
@@ -254,7 +252,6 @@ export const AVAILABLE_MODELS: ModelConfig[] = [
     maxOutputTokens: 65536
   },
 
-  // Gemini Models (via OpenAI SDK)
   {
     id: 'gemini-2.0-flash-exp',
     name: 'Gemini 2.5 Pro',
@@ -347,14 +344,11 @@ export function getDefaultModel(): ModelConfig {
 }
 
 export function getRecommendedModel(chatType: 'DOCUMENT' | 'REPOSITORY'): ModelConfig {
-  // Recommend models based on chat type
   if (chatType === 'REPOSITORY') {
-    // For code, prioritize coding capabilities - recommend GPT-4o or Gemini 1.5 Flash
     return AVAILABLE_MODELS.find(model => model.id === 'gpt-4o') || 
            AVAILABLE_MODELS.find(model => model.id === 'gemini-1.5-flash') ||
            getDefaultModel()
   } else {
-    // For documents, balance performance and cost - recommend GPT-4o Mini or Gemini 1.5 Flash
     return AVAILABLE_MODELS.find(model => model.id === 'gpt-4o-mini') || 
            AVAILABLE_MODELS.find(model => model.id === 'gemini-1.5-flash') ||
            getDefaultModel()

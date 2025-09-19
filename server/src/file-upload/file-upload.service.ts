@@ -1,4 +1,3 @@
-// src/file-upload/file-upload.service.ts
 
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
@@ -13,7 +12,6 @@ export class FileUploadService {
     @InjectQueue('file-processing') private fileProcessingQueue: Queue,
   ) {}
 
-  // This is where your business logic for the uploaded file will go.
   async handleFileUpload(file: Express.Multer.File, chatId: string) {
     if (!chatId) {
       throw new BadRequestException('chatId is required');

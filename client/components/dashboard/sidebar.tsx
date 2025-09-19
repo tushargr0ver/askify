@@ -8,6 +8,7 @@ import { useChatStore } from "@/hooks/useChatStore"
 import { useSidebarStore } from "@/hooks/useSidebarStore"
 import { SearchDialog } from "@/components/ui/search-dialog"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import { UsageDisplay } from "./usage-display"
 import { cn } from "@/lib/utils"
 
 interface SidebarProps {
@@ -21,7 +22,6 @@ export function Sidebar({ onNewChat }: SidebarProps) {
   const { chats, activeChat, setActiveChat, deleteChat, loadChats, loadChatMessages } = useChatStore()
   const { isOpen, close } = useSidebarStore()
 
-  // Load chats on mount
   React.useEffect(() => {
     loadChats()
   }, [loadChats])
@@ -39,8 +39,6 @@ export function Sidebar({ onNewChat }: SidebarProps) {
   }
 
   const getMessageClampClass = (message: string) => {
-    // If message is short (under 50 chars), use single line
-    // Otherwise use 2 lines with ellipsis
     return message.length <= 50 ? "line-clamp-1" : "line-clamp-2"
   }
 
@@ -88,9 +86,7 @@ export function Sidebar({ onNewChat }: SidebarProps) {
       
       <div className={cn(
         "bg-background lg:bg-muted/30 border-r flex flex-col transition-all duration-200 ease-in-out",
-        // Mobile: fixed positioned, slide in/out
         "fixed inset-y-0 left-0 z-50 w-64 transform lg:relative lg:z-auto lg:w-64",
-        // Desktop: show/hide with width
         "lg:static lg:transform-none",
         isOpen ? "translate-x-0" : "-translate-x-full lg:w-0 lg:border-r-0"
       )}>
@@ -193,6 +189,12 @@ export function Sidebar({ onNewChat }: SidebarProps) {
               )}
             </div>
           </ScrollArea>
+        </div>
+
+        {/* Usage Display */}
+        <div className="p-4 border-t flex-shrink-0">
+          <div className="text-xs font-medium text-muted-foreground mb-3">Message Usage</div>
+          <UsageDisplay compact />
         </div>
       </div>
 

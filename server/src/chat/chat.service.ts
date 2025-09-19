@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
 import { QdrantVectorStore } from '@langchain/qdrant';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Request, Response } from 'express';
 import {OpenAI} from 'openai';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { UsersService } from 'src/users/users.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { getModelById, getDefaultModel, getRecommendedModel, AVAILABLE_MODELS } from './models.config';
@@ -13,7 +14,10 @@ import { getModelById, getDefaultModel, getRecommendedModel, AVAILABLE_MODELS } 
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private usersService: UsersService,
+  ) {}
 
   /**
    * Get a friendly model display name for user-facing messages
@@ -65,7 +69,7 @@ Please try:
       include: {
         messages: {
           orderBy: { createdAt: 'desc' },
-          take: 1, // Get last message for preview
+          take: 1,
         },
         _count: {
           select: { messages: true },
@@ -98,7 +102,15 @@ Please try:
   }
 
  async sendMessage(chatId: string, userId: number, sendMessageDto: SendMessageDto) {
-    // Verify chat belongs to user and get user preferences
+    const usageCheck = await this.usersService.canSendMessage(userId);
+    if (!usageCheck.canSend) {
+      throw new BadRequestException({
+        message: usageCheck.reason,
+        usage: usageCheck.usage,
+        code: 'USAGE_LIMIT_EXCEEDED'
+      });
+    }
+
     const chat = await this.prisma.chat.findFirst({
       where: { id: chatId, userId },
       include: { user: true }
@@ -108,17 +120,16 @@ Please try:
       throw new NotFoundException('Chat not found');
     }
 
-    // Determine which model to use
     let selectedModel = sendMessageDto.model || chat.user.preferredModel || getDefaultModel().id;
     
-    // Validate model exists
     const modelConfig = getModelById(selectedModel);
     if (!modelConfig) {
       this.logger.warn(`Invalid model ${selectedModel}, falling back to default`);
       selectedModel = getDefaultModel().id;
     }
 
-    // Save user message
+    await this.usersService.incrementUsage(userId);
+
     const userMessage = await this.prisma.message.create({
       data: {
         content: sendMessageDto.content,
@@ -127,15 +138,18 @@ Please try:
       },
     });
 
-    // Process the message based on chat type - pass chatId and model
     let response: string;
-    if (chat.type === 'DOCUMENT') {
-      response = await this.processDocumentChat(sendMessageDto.content, chatId, selectedModel);
-    } else {
-      response = await this.processRepositoryChat(sendMessageDto.content, chatId, selectedModel);
+    try {
+      if (chat.type === 'DOCUMENT') {
+        response = await this.processDocumentChat(sendMessageDto.content, chatId, selectedModel);
+      } else {
+        response = await this.processRepositoryChat(sendMessageDto.content, chatId, selectedModel);
+      }
+    } catch (error) {
+      this.logger.error(`Error processing message: ${error.message}`);
+      response = this.generateErrorMessage(selectedModel, chat.type === 'DOCUMENT' ? 'document' : 'repository');
     }
 
-    // Save assistant message with model info
     const assistantMessage = await this.prisma.message.create({
       data: {
         content: response,
@@ -145,15 +159,17 @@ Please try:
       },
     });
 
-    // Update chat timestamp
     await this.prisma.chat.update({
       where: { id: chatId },
       data: { updatedAt: new Date() },
     });
 
+    const updatedUsage = await this.usersService.getUserUsage(userId);
+
     return {
       userMessage,
       assistantMessage,
+      usage: updatedUsage,
     };
   }
 
@@ -166,7 +182,6 @@ Please try:
       throw new NotFoundException('Chat not found');
     }
 
-    // Clean up the Qdrant collection
     await this.cleanupChatCollection(chatId);
 
     await this.prisma.chat.delete({
@@ -189,7 +204,6 @@ Please try:
       }
     } catch (error) {
       this.logger.warn(`Failed to delete Qdrant collection for chat ${chatId}: ${error.message}`);
-      // Don't throw - we still want to delete the chat from DB
     }
   }
 
@@ -208,7 +222,6 @@ Please try:
       });
     } catch (error) {
       this.logger.warn(`Collection ${collectionName} doesn't exist yet. Creating empty collection.`);
-      // Create empty collection - user needs to upload files/repo first
       return await QdrantVectorStore.fromDocuments(
         [],
         embeddings,
@@ -225,7 +238,6 @@ Please try:
     const retriever = vectorStore.asRetriever({ k: 2 });
     const result = await retriever.invoke(query);
 
-    // Check if we have any context
     if (!result || result.length === 0) {
       const modelConfig = getModelById(model);
       const modelName = modelConfig?.name || model;
@@ -261,7 +273,6 @@ ${JSON.stringify(result)}
 
 Remember: You are Askify powered by ${modelName}, always ready to help users unlock insights from their documents.`;
 
-    // Get model config to determine provider
     if (!modelConfig) {
       throw new Error(`Invalid model: ${model}`);
     }
@@ -270,22 +281,20 @@ Remember: You are Askify powered by ${modelName}, always ready to help users unl
     let requestModel: string;
 
     if (modelConfig.provider === 'gemini') {
-      // Use OpenAI SDK with Gemini API endpoint
       if (!process.env.GEMINI_API_KEY) {
         this.logger.warn('GEMINI_API_KEY not configured, falling back to OpenAI');
         client = new OpenAI({
           apiKey: process.env.OPENAI_API_KEY,
         });
-        requestModel = 'gpt-4o-mini'; // Fallback model
+        requestModel = 'gpt-4o-mini';
       } else {
         client = new OpenAI({
           apiKey: process.env.GEMINI_API_KEY,
           baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
         });
-        requestModel = model; // Use the actual Gemini model ID
+        requestModel = model;
       }
     } else {
-      // OpenAI models
       client = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
       });
@@ -308,7 +317,6 @@ Remember: You are Askify powered by ${modelName}, always ready to help users unl
     const retriever = vectorStore.asRetriever({ k: 2 });
     const result = await retriever.invoke(query);
 
-    // Check if we have any context
     if (!result || result.length === 0) {
       const modelConfig = getModelById(model);
       const modelName = modelConfig?.name || model;
@@ -346,7 +354,6 @@ ${JSON.stringify(result)}
 
 Remember: You are Askify powered by ${modelName}, your trusted coding companion for understanding and improving codebases.`;
 
-    // Get model config to determine provider
     if (!modelConfig) {
       throw new Error(`Invalid model: ${model}`);
     }
@@ -355,22 +362,20 @@ Remember: You are Askify powered by ${modelName}, your trusted coding companion 
     let requestModel: string;
 
     if (modelConfig.provider === 'gemini') {
-      // Use OpenAI SDK with Gemini API endpoint
       if (!process.env.GEMINI_API_KEY) {
         this.logger.warn('GEMINI_API_KEY not configured, falling back to OpenAI');
         client = new OpenAI({
           apiKey: process.env.OPENAI_API_KEY,
         });
-        requestModel = 'gpt-4o-mini'; // Fallback model
+        requestModel = 'gpt-4o-mini';
       } else {
         client = new OpenAI({
           apiKey: process.env.GEMINI_API_KEY,
           baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
         });
-        requestModel = model; // Use the actual Gemini model ID
+        requestModel = model;
       }
     } else {
-      // OpenAI models
       client = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
       });

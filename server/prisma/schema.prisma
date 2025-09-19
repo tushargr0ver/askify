@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -19,10 +13,13 @@ model User {
   email          String   @unique
   password       String
   preferredModel String?  @default("gpt-4o-mini")
+  dailyLimit     Int      @default(50)
+  monthlyLimit   Int      @default(1000)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   chats Chat[]
+  usage UserUsage[]
 
   @@map("users")
 }
@@ -35,7 +32,6 @@ model Chat {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages Message[]
 
@@ -46,14 +42,29 @@ model Message {
   id        String      @id @default(cuid())
   content   String
   role      MessageRole
-  model     String? // Track which model was used for this message
+  model     String?
   chatId    String
   createdAt DateTime    @default(now())
 
-  // Relations
   chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
 
   @@map("messages")
+}
+
+model UserUsage {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  date      DateTime @db.Date
+  messages  Int      @default(0)
+  uploads   Int      @default(0)
+  repos     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("user_usage")
 }
 
 enum ChatType {

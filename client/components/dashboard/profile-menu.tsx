@@ -25,7 +25,6 @@ export function ProfileMenu() {
     router.push("/login")
   }
 
-  // Mock profile data if not available
   const displayProfile = profile || {
     email: "user@example.com",
     userId: "123"

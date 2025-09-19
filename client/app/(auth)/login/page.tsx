@@ -45,7 +45,6 @@ export default function LoginPage() {
         { credentials: "include" }
       )
       setAccessToken(res.access_token)
-      // Fetch profile using the token
       const profile = await getJson<{ userId: string | number; email: string }>("/auth/profile")
       useAuthStore.getState().setProfile(profile)
       router.push("/")

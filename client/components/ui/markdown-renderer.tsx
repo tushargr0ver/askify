@@ -72,7 +72,6 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
               )
             }
 
-            // Inline code
             return (
               <code
                 className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono"

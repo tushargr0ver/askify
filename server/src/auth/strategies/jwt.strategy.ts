@@ -17,10 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  // This method is called after the token is verified.
-  // The `payload` is the decoded JWT.
   async validate(payload: any) {
-    // Passport will attach this return value to `req.user`
     return { userId: payload.sub, email: payload.email };
   }
 }

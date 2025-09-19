@@ -44,7 +44,6 @@ export type ChatState = {
   sendMessage: (content: string, model?: string) => Promise<void>
 }
 
-// Mock data
 const mockChats: Chat[] = [
   {
     id: "1",
@@ -98,7 +97,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ loading: true })
       const response = await getJson<any[]>("/chat")
       
-      // Transform backend response to frontend format
       const chats: Chat[] = response.map(chat => ({
         id: chat.id,
         title: chat.title,
@@ -122,7 +120,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ loading: true })
       const response = await getJson<any>(`/chat/${chatId}`)
       
-      // Transform backend response to frontend format
       const messages: Message[] = response.messages.map((msg: any) => ({
         id: msg.id,
         content: msg.content,
@@ -139,6 +136,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   
   sendMessage: async (content: string, model?: string) => {
     const { postJson } = await import("@/lib/api")
+    const { useUsageStore } = await import("@/hooks/useUsageStore")
     const { activeChat } = get()
     
     if (!activeChat) {
@@ -148,7 +146,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       set({ loading: true })
       
-      // Optimistically add user message
       const userMessage: Message = {
         id: Date.now().toString(),
         content,
@@ -160,16 +157,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messages: [...state.messages, userMessage]
       }))
       
-      // Prepare request body with optional model
       const requestBody: { content: string; model?: string } = { content }
       if (model) {
         requestBody.model = model
       }
       
-      // Send message to backend
-      const response = await postJson<typeof requestBody, { userMessage: any; assistantMessage: any }>(`/chat/${activeChat.id}/messages`, requestBody)
+      const response = await postJson<typeof requestBody, { 
+        userMessage: any; 
+        assistantMessage: any; 
+        usage?: any 
+      }>(`/chat/${activeChat.id}/messages`, requestBody)
       
-      // Replace optimistic message with real ones from backend
       set((state) => {
         const messagesWithoutOptimistic = state.messages.slice(0, -1)
         return {
@@ -191,21 +189,32 @@ export const useChatStore = create<ChatState>((set, get) => ({
           loading: false
         }
       })
+
+      if (response.usage) {
+        useUsageStore.getState().updateUsage(response.usage)
+      }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to send message:", error)
-      // Remove optimistic message on error
+      
       set((state) => ({
         messages: state.messages.slice(0, -1),
         loading: false
       }))
+      
+      if (error.data?.code === 'USAGE_LIMIT_EXCEEDED') {
+        const usageError = new Error(error.data.message || error.message)
+        usageError.name = 'UsageLimitError'
+        // @ts-ignore
+        usageError.usage = error.data.usage
+        throw usageError
+      }
+      
       throw error
     }
   },
 
   createChat: (title, type) => {
-    // This is now only used for basic chat creation without files/repos
-    // The actual API call happens in createChatWithFile/createChatWithRepository
     const newChat: Chat = {
       id: Date.now().toString(),
       title,
@@ -222,17 +231,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
   createChatWithFile: async (file: File) => {
     const { postJson, uploadFile } = await import("@/lib/api")
+    const { useUsageStore } = await import("@/hooks/useUsageStore")
     
     try {
       set({ processing: true, uploadProgress: 0 })
       
-      // First create the chat
       const newChat = await postJson<{ title?: string; type: ChatType }, Chat>("/chat", {
         title: file.name,
         type: "DOCUMENT"
       })
       
-      // Update state with new chat
       set((state) => ({
         chats: [newChat, ...state.chats],
         activeChat: newChat,
@@ -240,23 +248,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
         uploadProgress: 25
       }))
       
-      // Then upload the file
       const formData = new FormData()
       formData.append("file", file)
       formData.append("chatId", newChat.id)
       
-      const uploadResponse = await uploadFile<{ jobId: string }>("/file-upload", formData)
+      const uploadResponse = await uploadFile<{ jobId: string; usage?: any }>("/file-upload", formData)
+      
+      if (uploadResponse.usage) {
+        useUsageStore.getState().updateUsage(uploadResponse.usage)
+      }
       
       set({ uploadProgress: 50 })
       
-      // Poll for job completion (similar to repository processing)
       const jobId = uploadResponse.jobId
       let completed = false
       let attempts = 0
-      const maxAttempts = 30 // 30 seconds timeout
+      const maxAttempts = 30
       
       while (!completed && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+        await new Promise(resolve => setTimeout(resolve, 1000))
         
         try {
           const { getJson } = await import("@/lib/api")
@@ -281,35 +291,40 @@ export const useChatStore = create<ChatState>((set, get) => ({
         console.warn('Document processing timed out, but chat was created')
       }
       
-      // Wait a bit to show completion
       setTimeout(() => {
         set({ processing: false, uploadProgress: 0 })
-        // Reload chats to update the list
         get().loadChats()
       }, 500)
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("File upload failed:", error)
       set({ processing: false, uploadProgress: 0 })
+      
+      if (error.data?.code === 'USAGE_LIMIT_EXCEEDED') {
+        const usageError = new Error(error.data.message || error.message)
+        usageError.name = 'UsageLimitError'
+        // @ts-ignore
+        usageError.usage = error.data.usage
+        throw usageError
+      }
+      
       throw error
     }
   },
   createChatWithRepository: async (repoUrl: string) => {
     const { postJson } = await import("@/lib/api")
+    const { useUsageStore } = await import("@/hooks/useUsageStore")
     
     try {
       set({ processing: true, uploadProgress: 0 })
       
-      // Extract repository name from URL
       const repoName = repoUrl.split('/').pop() || 'repository'
       
-      // First create the chat
       const newChat = await postJson<{ title?: string; type: ChatType }, Chat>("/chat", {
         title: repoName,
         type: "REPOSITORY"
       })
       
-      // Update state with new chat
       set((state) => ({
         chats: [newChat, ...state.chats],
         activeChat: newChat,
@@ -317,22 +332,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
         uploadProgress: 25
       }))
       
-      // Then process the repository
-      const processResponse = await postJson<{ url: string; chatId: string }, { jobId: string }>("/repository/process", {
+      const processResponse = await postJson<{ url: string; chatId: string }, { jobId: string; usage?: any }>("/repository/process", {
         url: repoUrl,
         chatId: newChat.id
       })
       
+      if (processResponse.usage) {
+        useUsageStore.getState().updateUsage(processResponse.usage)
+      }
+      
       set({ uploadProgress: 50 })
       
-      // Poll for job completion (simplified polling)
       const jobId = processResponse.jobId
       let completed = false
       let attempts = 0
-      const maxAttempts = 30 // 30 seconds timeout
+      const maxAttempts = 30
       
       while (!completed && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
+        await new Promise(resolve => setTimeout(resolve, 1000))
         
         try {
           const { getJson } = await import("@/lib/api")
@@ -357,16 +374,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
         console.warn('Repository processing timed out, but chat was created')
       }
       
-      // Wait a bit to show completion
       setTimeout(() => {
         set({ processing: false, uploadProgress: 0 })
-        // Reload chats to update the list
         get().loadChats()
       }, 500)
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Repository processing failed:", error)
       set({ processing: false, uploadProgress: 0 })
+      
+      if (error.data?.code === 'USAGE_LIMIT_EXCEEDED') {
+        const usageError = new Error(error.data.message || error.message)
+        usageError.name = 'UsageLimitError'
+        // @ts-ignore
+        usageError.usage = error.data.usage
+        throw usageError
+      }
+      
       throw error
     }
   },

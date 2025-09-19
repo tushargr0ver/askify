@@ -1,4 +1,3 @@
-// src/repository/repository-processor.worker.ts
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import type { Job } from 'bull';
@@ -18,7 +17,6 @@ export class RepositoryProcessorWorker {
   private readonly tempDir = path.join(process.cwd(), 'temp-repos');
 
   constructor() {
-    // Ensure temp directory exists
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }
@@ -27,32 +25,26 @@ export class RepositoryProcessorWorker {
   @Process('process-repository')
   async processRepository(job: Job<any>) {
     try {
-      const { url, chatId } = job.data; // Add chatId to job data
+      const { url, chatId } = job.data;
       this.logger.log(`Processing repository: ${url} for chat: ${chatId}`);
 
-      // Extract repo name from URL
       const repoName = url.split('/').pop();
       const repoDir = path.join(this.tempDir, `${repoName}-${Date.now()}`);
 
-      // Clone the repository
       await job.progress(10);
       this.logger.log(`Cloning repository to ${repoDir}`);
       await execAsync(`git clone ${url} ${repoDir}`);
       
-      // Read code files
       await job.progress(30);
       const codeFiles = await this.getCodeFiles(repoDir);
       this.logger.log(`Found ${codeFiles.length} code files`);
       
-      // Process files into documents
       await job.progress(50);
       const docs = await this.processFiles(codeFiles, repoDir);
       
-      // Store in chat-specific vector database
       await job.progress(70);
-      await this.storeVectors(docs, chatId); // Pass chatId
+      await this.storeVectors(docs, chatId);
       
-      // Cleanup
       await job.progress(90);
       fs.rmSync(repoDir, { recursive: true, force: true });
       
@@ -70,7 +62,6 @@ export class RepositoryProcessorWorker {
   }
 
   private async getCodeFiles(dir: string): Promise<string[]> {
-    // Get all code files recursively (skip node_modules, .git, etc.)
     const { stdout } = await execAsync(
       `find ${dir} -type f -name "*.js" -o -name "*.ts" -o -name "*.py" -o -name "*.java" -o -name "*.go" | grep -v "node_modules" | grep -v ".git"`
     );
@@ -90,7 +81,7 @@ export class RepositoryProcessorWorker {
             pageContent: content,
             metadata: {
               source: relativePath,
-              type: path.extname(file).substring(1), // Remove dot from extension
+              type: path.extname(file).substring(1),
             },
           })
         );
@@ -111,7 +102,6 @@ export class RepositoryProcessorWorker {
     const collectionName = `chat_${chatId}`;
     
     try {
-      // Try to connect to existing collection first
       const vectorStore = await QdrantVectorStore.fromExistingCollection(
         embeddings,
         {
@@ -122,7 +112,6 @@ export class RepositoryProcessorWorker {
       await vectorStore.addDocuments(docs);
       this.logger.log(`Added ${docs.length} documents to existing collection ${collectionName}`);
     } catch (error) {
-      // If collection doesn't exist, create it with the documents
       this.logger.log(`Creating new collection: ${collectionName}`);
       await QdrantVectorStore.fromDocuments(
         docs,

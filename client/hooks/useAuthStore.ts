@@ -23,7 +23,12 @@ export const useAuthStore = create<AuthState>()(
       hydrated: false,
       setAccessToken: (accessToken) => set({ accessToken }),
       setProfile: (profile) => set({ profile }),
-      logout: () => set({ accessToken: null, profile: null }),
+      logout: () => {
+        import("@/hooks/useUsageStore").then(({ useUsageStore }) => {
+          useUsageStore.getState().reset()
+        })
+        set({ accessToken: null, profile: null })
+      },
       setHydrated: (b) => set({ hydrated: b }),
     }),
     {
@@ -31,7 +36,6 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ accessToken: state.accessToken, profile: state.profile }),
       onRehydrateStorage: () => (state, error) => {
-        // After rehydration completes, mark hydrated
         state?.setHydrated(true)
       },
     }

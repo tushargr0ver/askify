@@ -18,10 +18,24 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className, size = "default" }: ThemeToggleProps) {
-  const { theme, resolvedTheme, setTheme } = useThemeStore()
+  const { theme, resolvedTheme, hydrated } = useThemeStore()
 
-  // Force a default icon if resolvedTheme is undefined
-  const currentTheme = resolvedTheme || "light"
+  if (!hydrated) {
+    return (
+      <Button
+        variant="outline"
+        size={size}
+        className={cn(
+          "h-8 w-8 bg-background", 
+          size === "sm" && "h-6 w-6", 
+          className
+        )}
+        disabled
+      >
+        <div className={cn("h-4 w-4", size === "sm" && "h-3 w-3")} />
+      </Button>
+    )
+  }
 
   return (
     <DropdownMenu>
@@ -35,7 +49,7 @@ export function ThemeToggle({ className, size = "default" }: ThemeToggleProps) {
             className
           )}
         >
-          {currentTheme === "dark" ? (
+          {resolvedTheme === "dark" ? (
             <Moon className={cn("h-4 w-4 text-yellow-400", size === "sm" && "h-3 w-3")} />
           ) : (
             <Sun className={cn("h-4 w-4 text-orange-500", size === "sm" && "h-3 w-3")} />
@@ -44,15 +58,15 @@ export function ThemeToggle({ className, size = "default" }: ThemeToggleProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => useThemeStore.getState().setTheme("light")}>
           <Sun className="mr-2 h-4 w-4" />
           <span>Light</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => useThemeStore.getState().setTheme("dark")}>
           <Moon className="mr-2 h-4 w-4" />
           <span>Dark</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => useThemeStore.getState().setTheme("system")}>
           <Monitor className="mr-2 h-4 w-4" />
           <span>System</span>
         </DropdownMenuItem>
@@ -61,15 +75,29 @@ export function ThemeToggle({ className, size = "default" }: ThemeToggleProps) {
   )
 }
 
-// Simple toggle switch version for inline use
 export function ThemeSwitch({ className }: { className?: string }) {
-  const { resolvedTheme, setTheme } = useThemeStore()
-
-  // Force a default theme if resolvedTheme is undefined
-  const currentTheme = resolvedTheme || "light"
+  const { resolvedTheme, hydrated } = useThemeStore()
 
   const handleToggle = () => {
-    setTheme(currentTheme === "dark" ? "light" : "dark")
+    useThemeStore.getState().setTheme(resolvedTheme === "dark" ? "light" : "dark")
+  }
+
+  if (!hydrated) {
+    return (
+      <button
+        disabled
+        className={cn(
+          "relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 border-2 opacity-50",
+          "bg-gray-300 border-gray-400",
+          className
+        )}
+        aria-label="Toggle theme"
+      >
+        <div className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-lg transform transition-transform duration-200 flex items-center justify-center border-2 border-gray-100 translate-x-0.5">
+          <div className="h-3 w-3" />
+        </div>
+      </button>
+    )
   }
 
   return (
@@ -77,7 +105,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
       onClick={handleToggle}
       className={cn(
         "relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 border-2",
-        currentTheme === "dark" ? "bg-blue-600 border-blue-500" : "bg-gray-300 border-gray-400",
+        resolvedTheme === "dark" ? "bg-blue-600 border-blue-500" : "bg-gray-300 border-gray-400",
         className
       )}
       aria-label="Toggle theme"
@@ -85,10 +113,10 @@ export function ThemeSwitch({ className }: { className?: string }) {
       <div
         className={cn(
           "absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-lg transform transition-transform duration-200 flex items-center justify-center border-2 border-gray-100",
-          currentTheme === "dark" ? "translate-x-6" : "translate-x-0.5"
+          resolvedTheme === "dark" ? "translate-x-6" : "translate-x-0.5"
         )}
       >
-        {currentTheme === "dark" ? (
+        {resolvedTheme === "dark" ? (
           <Moon className="h-3 w-3 text-blue-700" />
         ) : (
           <Sun className="h-3 w-3 text-orange-500" />

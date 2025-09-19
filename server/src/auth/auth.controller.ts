@@ -12,19 +12,17 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
-  // The AuthGuard('local') will trigger our LocalStrategy
   @UseGuards(AuthGuard('local'))
   @Post('login')
   async login(@Request() req) {
-    // req.user is populated by Passport from the LocalStrategy's validate() method
+
     return this.authService.login(req.user);
   }
 
-  // The AuthGuard('jwt') will trigger our JwtStrategy
   @UseGuards(AuthGuard('jwt'))
   @Get('profile')
   getProfile(@Request() req) {
-    // req.user is populated by Passport from the JwtStrategy's validate() method
+
     return req.user;
   }
 }

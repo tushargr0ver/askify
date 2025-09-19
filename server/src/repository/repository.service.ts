@@ -14,7 +14,6 @@ export class RepositoryService {
   async processRepository(url: string, chatId: string) {
     this.logger.log(`Queuing repository processing for: ${url}, chat: ${chatId}`);
     
-    // Add repository processing job
     const job = await this.repositoryProcessingQueue.add('process-repository', {
       url,
       chatId,

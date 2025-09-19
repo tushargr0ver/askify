@@ -8,5 +8,5 @@ export class SendMessageDto {
 
     @IsOptional()
     @IsString()
-    model?: string; // Optional model override
+    model?: string;
 }

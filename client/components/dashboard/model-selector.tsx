@@ -66,7 +66,6 @@ export function ModelSelector() {
         preferredModel: selectedModel,
       });
       
-      // Update local state
       if (preferences) {
         setPreferences({
           ...preferences,

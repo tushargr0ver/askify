@@ -14,7 +14,7 @@ export class FileProcessorWorker {
 
   @Process('process-file')
   async processFile(job: Job<any>) {
-    const { path, chatId } = job.data; // Add chatId to job data
+    const { path, chatId } = job.data;
     this.logger.log(`Processing file at path: ${path} for chat: ${chatId}`);
 
     const loader = new PDFLoader(path);
@@ -29,7 +29,7 @@ export class FileProcessorWorker {
       embeddings,
       {
         url: 'http://localhost:6333',
-        collectionName: `chat_${chatId}`, // Chat-specific collection
+        collectionName: `chat_${chatId}`,
       }
     );
 

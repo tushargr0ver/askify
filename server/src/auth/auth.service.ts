@@ -41,7 +41,6 @@ export class AuthService {
       password: hashedPassword,
     });
 
-    // Don't return the password in the response
     const { password, ...user } = result;
     return user;
   }
