@@ -15,6 +15,23 @@ interface SidebarProps {
   onNewChat: () => void
 }
 
+// Simple inline markdown parser for basic formatting in sidebar
+const parseSimpleMarkdown = (text: string) => {
+  // Escape HTML entities first for security
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+  
+  // Apply basic markdown formatting
+  return escaped
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+    .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
+    .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs font-mono">$1</code>') // Inline code
+}
+
 export function Sidebar({ onNewChat }: SidebarProps) {
   const [searchOpen, setSearchOpen] = React.useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
@@ -158,12 +175,15 @@ export function Sidebar({ onNewChat }: SidebarProps) {
                           </span>
                         </div>
                         {chat.lastMessage && (
-                          <p className={cn(
-                            "text-xs text-muted-foreground leading-relaxed break-words",
-                            getMessageClampClass(chat.lastMessage)
-                          )}>
-                            {chat.lastMessage}
-                          </p>
+                          <div 
+                            className={cn(
+                              "text-xs text-muted-foreground leading-relaxed break-words prose-inline",
+                              getMessageClampClass(chat.lastMessage)
+                            )}
+                            dangerouslySetInnerHTML={{ 
+                              __html: parseSimpleMarkdown(chat.lastMessage) 
+                            }}
+                          />
                         )}
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">

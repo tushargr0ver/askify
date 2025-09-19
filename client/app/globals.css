@@ -147,3 +147,18 @@
     line-clamp: 3;
   }
 }
+
+/* Inline markdown styles for sidebar */
+@layer components {
+  .prose-inline strong {
+    @apply font-semibold;
+  }
+  
+  .prose-inline em {
+    @apply italic;
+  }
+  
+  .prose-inline code {
+    @apply bg-muted px-1 py-0.5 rounded text-xs font-mono;
+  }
+}
