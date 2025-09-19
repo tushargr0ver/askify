@@ -30,12 +30,22 @@ export class CorsSecurityMiddleware implements NestMiddleware {
   }
 
   private isAllowedOrigin(origin: string): boolean {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
     const allowedOrigins = [
       'https://askify.tushr.xyz',
       'https://www.askify.tushr.xyz',
-      'http://localhost:3000',
-      'http://localhost:3001',
     ];
+
+    // Add development origins if not in production
+    if (isDevelopment || !process.env.NODE_ENV) {
+      allowedOrigins.push(
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001'
+      );
+    }
     
     return allowedOrigins.includes(origin);
   }

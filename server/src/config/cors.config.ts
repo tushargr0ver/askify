@@ -31,14 +31,18 @@ export const getCorsConfig = (): CorsOptions => {
   } else if (isDevelopment) {
     allowedOrigins = [...developmentOrigins, ...productionOrigins, ...customOrigins];
   } else {
-    // Default to production settings for unknown environments
-    allowedOrigins = [...productionOrigins, ...customOrigins];
+    // Default to development settings for unknown/undefined NODE_ENV
+    console.log(`⚠️  NODE_ENV not set (current: ${process.env.NODE_ENV}), defaulting to development mode for CORS`);
+    allowedOrigins = [...developmentOrigins, ...productionOrigins, ...customOrigins];
   }
+
+  console.log(`🔧 CORS Environment: ${process.env.NODE_ENV || 'undefined'}`);
+  console.log(`🔧 Allowed origins:`, allowedOrigins);
 
   return {
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, etc.) only in development
-      if (!origin && isDevelopment) {
+      // Allow requests with no origin (mobile apps, curl, etc.) only in development or when NODE_ENV is not set
+      if (!origin && (isDevelopment || !process.env.NODE_ENV)) {
         return callback(null, true);
       }
 
@@ -46,7 +50,8 @@ export const getCorsConfig = (): CorsOptions => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.warn(`CORS blocked request from origin: ${origin}`);
+        console.warn(`🚨 CORS blocked request from origin: ${origin}`);
+        console.warn(`   Allowed origins:`, allowedOrigins);
         callback(new Error(`Origin ${origin} not allowed by CORS policy`));
       }
     },
