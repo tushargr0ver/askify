@@ -5,7 +5,7 @@ import { Search, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useChatStore } from "@/hooks/useChatStore"
+import { useChatStore, type Chat } from "@/hooks/useChatStore"
 import { cn } from "@/lib/utils"
 
 interface SearchDialogProps {
@@ -25,7 +25,7 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
     )
   }, [chats, query])
 
-  const handleChatSelect = (chat: any) => {
+  const handleChatSelect = (chat: Chat) => {
     setActiveChat(chat)
     onOpenChange(false)
     setQuery("")

@@ -11,12 +11,14 @@ function buildUrl(path: string) {
   return `${API_BASE_URL}${p}`
 }
 
-function pickErrorMessage(data: any): string | undefined {
+function pickErrorMessage(data: unknown): string | undefined {
   if (!data) return undefined
   if (typeof data === "string") return data
-  if (typeof data.message === "string") return data.message
-  if (Array.isArray(data.message) && data.message.length) return String(data.message[0])
-  if (typeof data.error === "string") return data.error
+  
+  const errorObj = data as Record<string, unknown>
+  if (typeof errorObj.message === "string") return errorObj.message
+  if (Array.isArray(errorObj.message) && errorObj.message.length) return String(errorObj.message[0])
+  if (typeof errorObj.error === "string") return errorObj.error
   return undefined
 }
 
@@ -32,7 +34,7 @@ async function request<TResp = unknown>(path: string, init?: RequestInit): Promi
 
   const res = await fetch(buildUrl(path), { ...init, headers })
 
-  let data: any = null
+  let data: unknown = null
   const text = await res.text()
   try { data = text ? JSON.parse(text) : null } catch { data = text }
 
@@ -91,7 +93,7 @@ export async function uploadFile<TResp = unknown>(path: string, formData: FormDa
     ...init
   })
 
-  let data: any = null
+  let data: unknown = null
   const text = await res.text()
   try { data = text ? JSON.parse(text) : null } catch { data = text }
 

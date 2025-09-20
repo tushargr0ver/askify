@@ -5,7 +5,7 @@ import { BarChart3, TrendingUp, Calendar, AlertTriangle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { useUsageStore, type UsageData } from "@/hooks/useUsageStore"
+import { useUsageStore } from "@/hooks/useUsageStore"
 import { useAuthStore } from "@/hooks/useAuthStore"
 
 interface UsageDisplayProps {
@@ -65,12 +65,6 @@ export function UsageDisplay({ compact = false }: UsageDisplayProps) {
     return date.toLocaleDateString('en-US', { weekday: 'short' })
   }
 
-  const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return "destructive"
-    if (percentage >= 75) return "default"
-    return "default"
-  }
-
   const getUsageVariant = (percentage: number) => {
     if (percentage >= 90) return "destructive"
     if (percentage >= 75) return "secondary"
@@ -93,8 +87,6 @@ export function UsageDisplay({ compact = false }: UsageDisplayProps) {
           <Progress 
             value={usage.daily.percentage} 
             className="h-2"
-            // @ts-ignore
-            indicatorClassName={usage.daily.percentage >= 90 ? "bg-destructive" : usage.daily.percentage >= 75 ? "bg-orange-500" : "bg-primary"}
           />
           {usage.daily.breakdown && (
             <div className="text-xs text-muted-foreground">
@@ -116,8 +108,6 @@ export function UsageDisplay({ compact = false }: UsageDisplayProps) {
           <Progress 
             value={usage.monthly.percentage} 
             className="h-2"
-            // @ts-ignore
-            indicatorClassName={usage.monthly.percentage >= 90 ? "bg-destructive" : usage.monthly.percentage >= 75 ? "bg-orange-500" : "bg-primary"}
           />
           {usage.monthly.breakdown && (
             <div className="text-xs text-muted-foreground">
@@ -153,8 +143,6 @@ export function UsageDisplay({ compact = false }: UsageDisplayProps) {
               <Progress 
                 value={usage.daily.percentage} 
                 className="h-2"
-                // @ts-ignore
-                indicatorClassName={usage.daily.percentage >= 90 ? "bg-destructive" : usage.daily.percentage >= 75 ? "bg-orange-500" : "bg-primary"}
               />
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>{usage.daily.remaining} remaining</span>
@@ -194,8 +182,6 @@ export function UsageDisplay({ compact = false }: UsageDisplayProps) {
               <Progress 
                 value={usage.monthly.percentage} 
                 className="h-2"
-                // @ts-ignore
-                indicatorClassName={usage.monthly.percentage >= 90 ? "bg-destructive" : usage.monthly.percentage >= 75 ? "bg-orange-500" : "bg-primary"}
               />
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>{usage.monthly.remaining} remaining</span>

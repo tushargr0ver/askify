@@ -69,7 +69,9 @@ const FormItem = React.forwardRef<
 })
 FormItem.displayName = "FormItem"
 
-interface FormLabelProps extends React.HTMLAttributes<HTMLLabelElement> {}
+interface FormLabelProps extends React.HTMLAttributes<HTMLLabelElement> {
+  className?: string
+}
 
 const FormLabel = React.forwardRef<HTMLLabelElement, FormLabelProps>(
   ({ className, ...props }, ref) => {

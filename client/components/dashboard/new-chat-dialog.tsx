@@ -19,8 +19,7 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
   const [file, setFile] = React.useState<File | null>(null)
   const [repoUrl, setRepoUrl] = React.useState("")
   const [repoUrlError, setRepoUrlError] = React.useState("")
-  const [processing, setProcessing] = React.useState(false)
-  const { createChat, createChatWithFile, createChatWithRepository, uploadProgress } = useChatStore()
+  const { createChatWithFile, createChatWithRepository, uploadProgress } = useChatStore()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -108,7 +107,7 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
         {!selectedType ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Choose how you'd like to start your chat
+              Choose how you&apos;d like to start your chat
             </p>
             <div className="grid gap-3">
               <button
@@ -131,7 +130,7 @@ export function NewChatDialog({ open, onOpenChange }: NewChatDialogProps) {
                 <div>
                   <h3 className="font-medium">Fetch Repository</h3>
                   <p className="text-sm text-muted-foreground">
-                    Chat with code from a GitHub repository(Public)
+                    Chat with code from a GitHub repository (Public)
                   </p>
                 </div>
               </button>

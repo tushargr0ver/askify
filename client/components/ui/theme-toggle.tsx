@@ -18,7 +18,7 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className, size = "default" }: ThemeToggleProps) {
-  const { theme, resolvedTheme, hydrated } = useThemeStore()
+  const { resolvedTheme, hydrated } = useThemeStore()
 
   if (!hydrated) {
     return (

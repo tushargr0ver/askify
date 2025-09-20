@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { useChatStore } from "@/hooks/useChatStore"
 import { useUsageStore } from "@/hooks/useUsageStore"
 import { QuickModelSelector } from "./quick-model-selector"
-import { cn } from "@/lib/utils"
 
 export function ChatInput() {
   const [message, setMessage] = React.useState("")
@@ -27,11 +26,12 @@ export function ChatInput() {
 
     try {
       await sendChatMessage(messageContent, selectedModel)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to send message:", error)
       
-      if (error.name === 'UsageLimitError') {
-        setUsageError(error.message)
+      const err = error as { name?: string; message?: string }
+      if (err.name === 'UsageLimitError') {
+        setUsageError(err.message || 'Usage limit reached')
       } else {
         setMessage(messageContent)
       }

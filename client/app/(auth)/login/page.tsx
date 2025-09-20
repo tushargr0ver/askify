@@ -48,8 +48,9 @@ export default function LoginPage() {
       const profile = await getJson<{ userId: string | number; email: string }>("/auth/profile")
       useAuthStore.getState().setProfile(profile)
       router.push("/")
-    } catch (e: any) {
-      setError(e?.message || "Invalid email or password")
+    } catch (e: unknown) {
+      const error = e as { message?: string }
+      setError(error?.message || "Invalid email or password")
     } finally {
       setSubmitting(false)
     }

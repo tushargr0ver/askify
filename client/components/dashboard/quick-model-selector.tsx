@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Brain, ChevronDown } from "lucide-react";
+import { Brain } from "lucide-react";
 import { getJson } from "@/lib/api";
 
 interface ModelConfig {
@@ -26,11 +26,7 @@ export function QuickModelSelector({ value, onChange, compact = false }: ModelSe
   const [defaultModel, setDefaultModel] = useState<ModelConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadModels();
-  }, []);
-
-  const loadModels = async () => {
+  const loadModels = useCallback(async () => {
     try {
       const response = await getJson<{
         availableModels: ModelConfig[];
@@ -50,7 +46,11 @@ export function QuickModelSelector({ value, onChange, compact = false }: ModelSe
     } finally {
       setLoading(false);
     }
-  };
+  }, [value, onChange]);
+
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
 
   const selectedModel = models.find(m => m.id === value) || defaultModel;
 

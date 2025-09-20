@@ -6,12 +6,9 @@ import { ChatHeader } from "@/components/dashboard/chat-header"
 import { ChatMessages } from "@/components/dashboard/chat-messages"
 import { ChatInput } from "@/components/dashboard/chat-input"
 import { NewChatDialog } from "@/components/dashboard/new-chat-dialog"
-import { useSidebarStore } from "@/hooks/useSidebarStore"
-import { cn } from "@/lib/utils"
 
 export default function Dashboard() {
   const [newChatOpen, setNewChatOpen] = React.useState(false)
-  const { isOpen } = useSidebarStore()
 
   return (
     <div className="h-screen flex bg-background overflow-hidden">

@@ -34,7 +34,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ node, className, children, ...props }) {
+          code({ className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || "")
             const language = match ? match[1] : ""
             const code = String(children).replace(/\n$/, "")
@@ -61,7 +61,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
                     </Button>
                   </div>
                   <SyntaxHighlighter
-                    style={resolvedTheme === "dark" ? (oneDark as any) : (oneLight as any)}
+                    style={resolvedTheme === "dark" ? (oneDark as Record<string, React.CSSProperties>) : (oneLight as Record<string, React.CSSProperties>)}
                     language={language}
                     PreTag="div"
                     className="!mt-0 !rounded-t-none"

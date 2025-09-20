@@ -48,13 +48,14 @@ export default function SignupPage() {
     setSubmitting(true)
     setError(null)
     try {
-      await postJson<{ email: string; password: string }, any>("/auth/register", {
+      await postJson<{ email: string; password: string }, { message: string }>("/auth/register", {
         email: values.email,
         password: values.password,
       })
       router.push("/")
-    } catch (e: any) {
-      setError(e?.message || "Something went wrong")
+    } catch (e: unknown) {
+      const error = e as { message?: string }
+      setError(error?.message || "Something went wrong")
     } finally {
       setSubmitting(false)
     }
