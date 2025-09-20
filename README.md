@@ -100,7 +100,7 @@ cd server && pnpm install
 cd ../client && pnpm install
 
 # Run database migrations
-cd ../server && npx prisma migrate dev
+cd ../server && pnpm dlx prisma migrate dev
 
 # Start development servers
 cd server && pnpm run start:dev  # Backend on :3001
@@ -206,9 +206,9 @@ pnpm run build        # Production build
 pnpm run lint         # ESLint check
 
 # Database operations
-npx prisma studio     # Database GUI
-npx prisma migrate dev # Run migrations
-npx prisma generate   # Generate client
+pnpm dlx prisma studio     # Database GUI
+pnpm dlx prisma migrate dev # Run migrations
+pnpm dlx prisma generate   # Generate client
 ```
 
 ## 🚀 Deployment
